@@ -1,0 +1,2 @@
+- このカレントディレクトリにあるDockerfileは動かない
+- 試したい時は、rails_sample/のdocker-compose.ymlやDockerfileを使うこと

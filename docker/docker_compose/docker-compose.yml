@@ -1,0 +1,82 @@
+# docker composeのversion情報
+version: '3.3'
+
+# services直下の名前がサービス名 = コンテナ名
+services:
+  webserver: 
+    # imageでベースイメージの指定（タグやユーザー名含め指定可能）
+    image: ubuntu:latest
+    # 代わりにbuildでこのファイルから見たディレクトリを指定してDockerfileを指定することも可能
+    # buildの場合、docker-compose buildするか、docker-compose up --buildという指定が必要
+    # build: . #current directoryにあるDockerfileをビルドする、の意味
+    # もしくは、Dockerfileも指定したい場合は、contextパラメーターを使用する
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile_alternate
+    #   args: # argsも指定可能
+    #     foo: "bar"
+    #     user: "john"
+
+    # command: コンテナで動かすCMDを指定できる。ベースイメージで指定されている場合は上書きする
+    command: /bin/bash
+    # entry-pointも上書きできる。エントリーポイントは列挙型で指定する
+    entrypoint:
+      - php
+      - -d
+      - memory_limit=1
+    # コンテナが公開するポートを指定できる。
+    # ホストマシンのポート:コンテナのポートで指定するか、
+    # コンテナのポートのみを指定する（このとき、ホストのポートは任意のものが割り当てられる）
+    ports: 
+      - "80:80" # ymlがxx:yyを時刻として認識するので、"”が必須
+    networks:
+      - webnet
+    # リンク機能？を使う場合、linksに連携先を設定できる。:の後にaliasを設定できるらしい
+    links:
+      - logserver
+      - logserver:alias01
+    # ホストマシンにポートを公開せず、リンク機能を使って連携するコンテナ内部にのみポートを公開する時はexposeを使う
+    expose:
+      - "3000"
+    # depends_onはコンテナの開始順序を制御する。
+    # 開始順序は制御するが、起動が完了するかは保証されない
+    depends_on:
+      - redis
+    # 環境変数
+    environment:
+      # もしくは、name1: value1でもよい
+      - name=value
+    env_file:
+      - ./.env #envfileのパスを指定
+    # labels: コンテナにラベルをつける
+    # labelの確認には、docker-compose configを用いる
+    labels:
+      # もしくは、com.host.description: labelでもよい
+      - com.host.description=label
+    # volumes: ホストのパス:コンテナのディレクトリパスで指定
+    # サービスの外で指定された、volumesを利用することもできる。この場合ホストのどこのディレクトリを使うかはDockerが管理する
+    volumes:
+      # docker-compose up webserver --rm -d /bin/shとし、cat /testvol/test.txtとすると、text.txtの中身が見れる
+      - ./test_volume:/testvol:ro #:roをつけると、読み取り専用にできる
+      - data-volume:/data
+    # 別のコンテナのvolumeを全てマウントする場合は、volumes_from: コンテナ名を使う
+    # volumes_from:
+    #   - container1
+  redis:
+    image: redis
+    networks:
+      - webnet
+
+networks:
+# 自動でネットワークが生成される
+  webnet:
+
+volumes:
+   # 自動で生成される。
+   # [docker-compose.ymlのあるディレクトリ名]_[volume名]という名前が自動で割り当てられる
+  data-volume:
+  # nameを指定すると、named-test-volumeになる
+  data-volume2:
+    name: named-test-volume
+    # externalオプションは、事前に他の方法でvolumeが作成ずみであることを知らせる
+    # external: true

@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./tmp/db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+    networks:
+        - my_test_network
+  web:
+    build:
+      context: .
+      dockerfile: DockerfileRails
+    # DockerfileのCMD命令を上書きしてport 3001で起動
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3001 -b '0.0.0.0'"
+    entrypoint:
+      # どっちの書き方にしてもexec形式になるっぽい？
+      # ./をつけると、ホスト側のファイルが実行できる。
+      # つけないと、imageにコピーされたentrypoint.shを起動するという意味になるのでbuildしないと変更が反映されない
+      # そもそもそれだと、imageの中に何のファイルがあるのかを知っていないといけないことになるので、実用性に欠ける
+      - ./entrypoint.sh
+    volumes:
+      - .:/myapp
+      - my_test_volume:/test_volume
+      - my_test_volume_named:/named_test_volume
+    # DockerfileのEXPOSEに加え、port 3001が空いている
+    # DockerfileのEXPOSEが上書きされす、port3000は空いたまま
+    ports:
+      - "3001:3001"
+    depends_on:
+      - db
+    networks:
+      - my_test_network
+
+networks:
+  my_test_network:
+
+# docker volume lsで見ると、
+# rails_sample_my_test_volumeとsuper-great-volumeが見られる
+volumes:
+  my_test_volume:
+  my_test_volume_named:
+    name: super-great-volume
